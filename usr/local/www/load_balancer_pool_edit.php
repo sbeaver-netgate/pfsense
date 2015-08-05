@@ -30,7 +30,7 @@
 	POSSIBILITY OF SUCH DAMAGE.
 */
 /*
-	pfSense_MODULE:	routing
+	pfSense_MODULE: routing
 */
 
 ##|+PRIV
@@ -117,7 +117,7 @@ if ($_POST) {
 			}
 		}
 	}
-	
+
 	if (is_array($_POST['serversdisabled'])) {
 		foreach($pconfig['serversdisabled'] as $svrent) {
 			if (!is_ipaddr($svrent) && !is_subnetv4($svrent)) {
@@ -128,9 +128,9 @@ if ($_POST) {
 			}
 		}
 	}
-	
+
 	$m = array();
-	
+
 	for ($i=0; isset($config['load_balancer']['monitor_type'][$i]); $i++)
 		$m[$config['load_balancer']['monitor_type'][$i]['name']] = $config['load_balancer']['monitor_type'][$i];
 
@@ -141,10 +141,10 @@ if ($_POST) {
 		$poolent = array();
 		if(isset($id) && $a_pool[$id])
 			$poolent = $a_pool[$id];
-			
+
 		if($poolent['name'] != "")
 			$changedesc .= sprintf(gettext(" modified '%s' pool:"), $poolent['name']);
-		
+
 		update_if_changed("name", $poolent['name'], $_POST['name']);
 		update_if_changed("mode", $poolent['mode'], $_POST['mode']);
 		update_if_changed("description", $poolent['descr'], $_POST['descr']);
@@ -163,7 +163,7 @@ if ($_POST) {
 			$a_pool[$id] = $poolent;
 		} else
 			$a_pool[] = $poolent;
-		
+
 		if ($changecount > 0) {
 			/* Mark pool dirty */
 			mark_subsystem_dirty('loadbalancer');
@@ -184,189 +184,111 @@ include("head.inc");
 <script type="text/javascript">
 //<![CDATA[
 events.push(function(){
-	function clearcombo(){
-	  for (var i=document.iform.serversSelect.options.length-1; i>=0; i--){
-		document.iform.serversSelect.options[i] = null;
-	  }
-	  document.iform.serversSelect.selectedIndex = -1;
+
+	// Disables the specified input element
+	function disableInput(id, disable) {
+		$('#' + id).prop("disabled", disable);
 	}
-	
-	function AddServerToPool() {
-		$('[name="servers[]"]').append(new Option($('#ipaddr').val(), $('#ipaddr').val()));
-	}
-	
-	
+
+	// Select every option in the specified multiselect
 	function AllServers(id, selectAll) {
-	   var opts = document.getElementById(id).getElementsByTagName('option');
-	   for (i = 0; i < opts.length; i++)
-	   {
-	       opts[i].selected = selectAll;
+	   for (i = 0; i < id.length; i++)	   {
+		   id.eq(i).prop('selected', selectAll);
 	   }
 	}
-	
-	
-	function RemoveServerFromPool(form, field)
-	{
-		var theSel = form[field];
-		var selIndex = theSel.selectedIndex;
-		if (selIndex != -1) {
-			for(i=theSel.length-1; i>=0; i--)
-			{
-				if(theSel.options[i].selected)
-				{
-					theSel.options[i] = null;
+
+	// Move all selected options from one multiselect to another
+	function moveOptions(From, To)	{
+		var len = From.length;
+		var option;
+
+		if(len > 1) {
+			for(i=0; i<len; i++) {
+				if(From.eq(i).is(':selected')) {
+					option = From.eq(i).val();
+					To.append(new Option(option, option));
+					From.eq(i).remove();
 				}
-			}
-			if (theSel.length > 0) {
-				theSel.selectedIndex = selIndex == 0 ? 0 : selIndex - 1;
-			}
-		}
-	}
-	
-	function addOption(theSel, theText, theValue)
-	{
-		var newOpt = new Option(theText, theValue);
-		var selLength = theSel.length;
-		theSel.options[selLength] = newOpt;
-	}
-	
-	function deleteOption(theSel, theIndex)
-	{ 
-		var selLength = theSel.length;
-		if(selLength>0)
-		{
-			theSel.options[theIndex] = null;
-		}
-	}
-	
-	function moveOptions(theSelFrom, theSelTo)
-	{
-		var selLength = theSelFrom.length;
-		var selectedText = new Array();
-		var selectedValues = new Array();
-		var selectedCount = 0;
-	
-		var i;
-	
-		// Find the selected Options in reverse order
-		// and delete them from the 'from' Select.
-		for(i=selLength-1; i>=0; i--)
-		{
-			if(theSelFrom.options[i].selected)
-			{
-				selectedText[selectedCount] = theSelFrom.options[i].text;
-				selectedValues[selectedCount] = theSelFrom.options[i].value;
-				deleteOption(theSelFrom, i);
-				selectedCount++;
-			}
-		}
-	
-		// Add the selected text/values in reverse order.
-		// This will add the Options to the 'to' Select
-		// in the same order as they were in the 'from' Select.
-		for(i=selectedCount-1; i>=0; i--)
-		{
-			addOption(theSelTo, selectedText[i], selectedValues[i]);
-		}
-	}
-	
-	function checkPoolControls() {
-		var active = document.iform.serversSelect;
-		var inactive = document.iform.serversDisabledSelect;
-		if (jQuery("#mode").val() == "failover") {
-			if (jQuery("#serversSelect option").length > 0) {
-				jQuery("#moveToEnabled").prop("disabled",true);
-			} else {
-				jQuery("#moveToEnabled").prop("disabled",false);
-			}
-		} else {
-			jQuery("#moveToEnabled").prop("disabled",false);
-		}
-	}
-	
-	function enforceFailover() {
-		if (jQuery("#mode").val() != "failover") {
-			return;
-		}
-	
-		var active = document.iform.serversSelect;
-		var inactive = document.iform.serversDisabledSelect;
-		var count = 0;
-		var moveText = new Array();
-		var moveVals = new Array();
-		var i;
-		if (active.length > 1) {
-			// Move all but one entry to the disabled list
-			for (i=active.length-1; i>0; i--) {
-				moveText[count] = active.options[i].text;
-				moveVals[count] = active.options[i].value;
-				deleteOption(active, i);
-				count++;
-			}
-			for (i=count-1; i>=0; i--) {
-				addOption(inactive, moveText[i], moveVals[i]);
-			}
-		}
-	}
-	
-	// functions up() and down() modified from http://www.babailiica.com/js/sorter/
-	
-	function up(obj) {
-		var sel = new Array();
-		for (var i=0; i<obj.length; i++) {
-			if (obj[i].selected == true) {
-				sel[sel.length] = i;
-			}
-		}
-		for (i in sel) {
-			if (sel[i] != 0 && !obj[sel[i]-1].selected) {
-				var tmp = new Array(obj[sel[i]-1].text, obj[sel[i]-1].value);
-				obj[sel[i]-1].text = obj[sel[i]].text;
-				obj[sel[i]-1].value = obj[sel[i]].value;
-				obj[sel[i]].text = tmp[0];
-				obj[sel[i]].value = tmp[1];
-				obj[sel[i]-1].selected = true;
-				obj[sel[i]].selected = false;
-			}
-		}
-	}
-	
-	function down(obj) {
-		var sel = new Array();
-		for (var i=obj.length-1; i>-1; i--) {
-			if (obj[i].selected == true) {
-				sel[sel.length] = i;
-			}
-		}
-		
-		for (i in sel) {
-			if (sel[i] != obj.length-1 && !obj[sel[i]+1].selected) {
-				var tmp = new Array(obj[sel[i]+1].text, obj[sel[i]+1].value);
-				obj[sel[i]+1].text = obj[sel[i]].text;
-				obj[sel[i]+1].value = obj[sel[i]].value;
-				obj[sel[i]].text = tmp[0];
-				obj[sel[i]].value = tmp[1];
-				obj[sel[i]+1].selected = true;
-				obj[sel[i]].selected = false;
 			}
 		}
 	}
 
-    // Make button a plain button, not a submit button
-    $("#btnaddtopool").prop('type','button');
-    
-    // On click, copy the hidden 'mymac' text to the 'mac' input
-    $("#btnaddtopool").click(function() {
-        AddServerToPool(); 
-//        enforceFailover(); 
-//        checkPoolControls();
-    });    	
+	function checkPoolControls() {
+
+		if ($("#mode").val() == "failover") {
+			disableInput('movetoenabled', $('[name="servers[]"] option').length > 0);
+		} else {
+			disableInput('movetoenabled',false);
+		}
+	}
+
+	// Move (copy/delete) all but one of the items in the Enabled (server) list to the Disabled list
+	function enforceFailover() {
+		if ($('#mode').val() != 'failover') {
+			return;
+		}
+
+		var len = $('[name="servers[]"] option').length;
+		var option;
+
+		if(len > 1) {
+			for(i=len-1; i>0; i--) {
+				option = $('[name="servers[]"] option').eq(i).val();
+				$('[name="serversdisabled[]"]').append(new Option(option, option));
+				$('[name="servers[]"] option').eq(i).remove();
+			}
+		}
+	}
+
+	// Make buttons plain buttons, not a submit
+	$("#btnaddtopool").prop('type','button');
+	$("#removeenabled").prop('type','button');
+	$("#removedisabled").prop('type','button');
+	$("#movetodisabled").prop('type','button');
+	$("#movetoenabled").prop('type','button');
+
+	// On click . .
+	$("#btnaddtopool").click(function() {
+		$('[name="servers[]"]').append(new Option($('#ipaddr').val(), $('#ipaddr').val()));
+		enforceFailover();
+		checkPoolControls();
+	});
+
+	$('#mode').on('change', function() {
+		enforceFailover();
+		checkPoolControls();
+	});
+
+	$("#removeenabled").click(function() {
+		$('[name="servers[]"] option:selected').remove();
+	});
+
+	$("#removedisabled").click(function() {
+		$('[name="serversdisabled[]"] option:selected').remove();
+	});
 	
+	$("#movetodisabled").click(function() {
+		moveOptions($('[name="servers[]"] option'), $('[name="serversdisabled[]"]'));
+	});
+
+	$("#movetoenabled").click(function() {
+		moveOptions($('[name="serversdisabled[]"] option'), $('[name="servers[]"]'));
+	});
+
+	// On initial page load
+	checkPoolControls();
+
+	// On submit
+	$('form').submit(function(){
+		AllServers($('[name="servers[]"] option'), true);
+		AllServers($('[name="serversdisabled[]"] option'), true);
+	});
+
 });
 //]]>
 </script>
 
-<?php 
+<?php
 if ($input_errors)
 	print_input_errors($input_errors);
 
@@ -424,7 +346,7 @@ $section = new Form_Section('Add item to the pool');
 
 $monitorlist = array();
 
-foreach ($config['load_balancer']['monitor_type'] as $monitor) 
+foreach ($config['load_balancer']['monitor_type'] as $monitor)
 	$monitorlist[$monitor['name']] = $monitor['name'];
 
 if(count($config['load_balancer']['monitor_type'])) {
@@ -477,39 +399,48 @@ $group->add(new Form_Select(
 	is_array($pconfig['servers']) ? array_combine($pconfig['servers'], $pconfig['servers']) : array(),
 	true
 ))->setHelp('Enabled (Default)');
-	
-$section->add($group);
-
-$group = new Form_Group('');
-
-$group->add(new Form_Button(
-	'button1',
-	'Remove'
-))->removeClass('btn-primary')->addClass('btn-default btn-sm');
-
-$group->add(new Form_Button(
-	'button1',
-	'Remove'
-))->removeClass('btn-primary')->addClass('btn-default btn-sm');
 
 $section->add($group);
 
 $group = new Form_Group('');
 
 $group->add(new Form_Button(
-	'Remove',
+	'removedisabled',
+	'Remove'
+))->removeClass('btn-primary')->addClass('btn-default btn-sm');
+
+$group->add(new Form_Button(
+	'removeenabled',
+	'Remove'
+))->removeClass('btn-primary')->addClass('btn-default btn-sm');
+
+$section->add($group);
+
+$group = new Form_Group('');
+
+$group->add(new Form_Button(
+	'movetoenabled',
 	'Move to enabled list >'
 ))->removeClass('btn-primary')->addClass('btn-default btn-sm');
 
 $group->add(new Form_Button(
-	'button1',
+	'movetodisabled',
 	'< Move to disabled list'
 ))->removeClass('btn-primary')->addClass('btn-default btn-sm');
 
 $section->add($group);
 
+if (isset($id) && $a_pool[$id] && $_GET['act'] != 'dup') {
+	$section->addInput(new Form_Input(
+		'id',
+		null,
+		'hidden',
+		$id
+	));
+}
+
 $form->add($section);
 
 print($form);
 
- include("foot.inc"); 
+include("foot.inc");

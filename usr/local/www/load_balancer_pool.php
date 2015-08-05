@@ -120,32 +120,6 @@ $tab_array[] = array(gettext("Monitors"), false, "load_balancer_monitor.php");
 $tab_array[] = array(gettext("Settings"), false, "load_balancer_setting.php");
 display_top_tabs($tab_array);
 
-// Debug
-$a_pool = array
-(
-	'0' => array
-		(
-			'name' => 'Pool1',
-			'mode' => 'loadbalance',
-			'descr' => 'My Test Pool',
-			'port' => '444',
-			'retry' => '',
-			'servers' => array
-				(
-					'0' => '10.255.255.1',
-					'1' => '10.255.255.10'
-				),
-
-			'serversdisabled' => array
-				(
-					'0' => ''
-				),
-
-			'monitor' => 'ICMP'
-		)
-
-);
-
 ?>
 <form action="load_balancer_pool.php" method="post">
 	<div class="panel panel-default">
